@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: reliable_email_postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: email_scheduler
+      POSTGRES_USER: email_scheduler_user
+      POSTGRES_PASSWORD: email_scheduler_password
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
