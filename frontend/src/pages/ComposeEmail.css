@@ -1,0 +1,142 @@
+.compose-page {
+  min-height: calc(100vh - 64px);
+  padding: 40px 20px 70px;
+  background: #f8fafc;
+}
+
+.compose-container {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.back-button {
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 30px;
+}
+
+.back-button:hover {
+  background: #f9fafb;
+}
+
+.compose-header {
+  margin-bottom: 30px;
+}
+
+.compose-header h1 {
+  margin: 0 0 8px;
+  font-size: 36px;
+  color: #111827;
+}
+
+.compose-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 17px;
+}
+
+.compose-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 30px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 7px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  color: #111827;
+  font-size: 15px;
+  font-family: inherit;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+}
+
+.message-input {
+  resize: vertical;
+  min-height: 220px;
+}
+
+.form-help {
+  margin: 7px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.success-message {
+  padding: 13px 15px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.error-message {
+  padding: 13px 15px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.schedule-button {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #111827;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.schedule-button:hover {
+  background: #1f2937;
+}
+
+.schedule-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 640px) {
+  .compose-page {
+    padding: 25px 15px 50px;
+  }
+
+  .compose-header h1 {
+    font-size: 30px;
+  }
+
+  .compose-form {
+    padding: 20px;
+  }
+}

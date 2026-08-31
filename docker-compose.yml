@@ -3,17 +3,21 @@ services:
     image: postgres:17
     container_name: reliable_email_postgres
     restart: unless-stopped
-
     environment:
-      POSTGRES_DB: email_scheduler
       POSTGRES_USER: email_scheduler_user
       POSTGRES_PASSWORD: email_scheduler_password
-
+      POSTGRES_DB: email_scheduler
     ports:
       - "5432:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: reliable_email_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
 
 volumes:
   postgres_data:

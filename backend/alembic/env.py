@@ -4,6 +4,9 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.core.database import Base
+from app.models.recipient import EmailRecipient
+from app.models.scheduled_email import ScheduledEmail
+from app.models.sender import EmailSender
 from app.models.user import User
 
 from logging.config import fileConfig

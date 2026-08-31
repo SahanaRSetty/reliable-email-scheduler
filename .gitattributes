@@ -1,0 +1,8 @@
+﻿# Treat common source/config files as text
+*.py text
+*.yml text
+*.yaml text
+*.json text
+*.md text
+*.txt text
+*.env.example text
