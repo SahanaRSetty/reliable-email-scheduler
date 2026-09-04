@@ -9,6 +9,7 @@ from app.models.scheduled_email import EmailStatus, ScheduledEmail
 from app.models.sender import EmailSender
 from app.services.email_sender import send_email
 from app.worker.celery_app import celery_app
+from app.services.encryption import decrypt_smtp_password
 
 
 @celery_app.task
@@ -182,7 +183,7 @@ def send_scheduled_email(email_id: int):
                     smtp_host=sender.smtp_host,
                     smtp_port=sender.smtp_port,
                     smtp_username=sender.smtp_username,
-                    smtp_password=sender.smtp_password,
+                    smtp_password=decrypt_smtp_password(sender.smtp_password),
                     sender_email=sender.email,
                     sender_name=sender.display_name,
                     recipient_email=recipient.email,

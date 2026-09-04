@@ -4,6 +4,7 @@ import {
   Route,
   Routes,
 } from "react-router-dom";
+import { Toaster } from "sonner";
 
 import AuthLayout from "./components/AuthLayout";
 
@@ -12,10 +13,14 @@ import Dashboard from "./pages/Dashboard";
 import ComposeEmail from "./pages/ComposeEmail";
 import ScheduledEmails from "./pages/ScheduledEmails";
 import SentEmails from "./pages/SentEmails";
+import FailedEmails from "./pages/FailedEmails";
+import Senders from "./pages/Senders";
 
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-right" richColors />
+
       <Routes>
         <Route
           path="/"
@@ -46,6 +51,16 @@ function App() {
           <Route
             path="/sent"
             element={<SentEmails />}
+          />
+
+          <Route
+            path="/failed"
+            element={<FailedEmails />}
+          />
+
+          <Route
+            path="/senders"
+            element={<Senders />}
           />
         </Route>
       </Routes>

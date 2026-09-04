@@ -1,40 +1,184 @@
 .navbar {
-  height: 64px;
+  min-height: 72px;
   padding: 0 32px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: white;
+  gap: 28px;
+  background: rgba(255, 255, 255, 0.96);
   border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
 }
 
 .navbar-brand {
+  flex-shrink: 0;
   font-size: 19px;
-  font-weight: 700;
+  font-weight: 750;
+  letter-spacing: -0.02em;
   color: #111827;
 }
 
-.navbar-right {
+.navbar-links {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.navbar-link {
+  padding: 9px 13px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.navbar-link:hover {
+  background: #f1f5f9;
+  color: #111827;
+}
+
+.navbar-link.active {
+  background: #111827;
+  color: white;
+  border-color: #111827;
+}
+
+.navbar-link.active:hover {
+  background: #1f2937;
+  border-color: #1f2937;
+}
+
+.navbar-link:active {
+  transform: translateY(1px);
+}
+
+.navbar-link:focus-visible,
+.logout-button:focus-visible {
+  outline: 3px solid rgba(17, 24, 39, 0.15);
+  outline-offset: 2px;
+}
+
+.navbar-right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .navbar-user {
-  color: #4b5563;
+  color: #64748b;
   font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .logout-button {
-  padding: 8px 16px;
+  padding: 9px 16px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   background: white;
   color: #374151;
   font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .logout-button:hover {
-  background: #f9fafb;
+  background: #f8fafc;
+  border-color: #9ca3af;
+  color: #111827;
+}
+
+@media (max-width: 900px) {
+  .navbar {
+    gap: 16px;
+    padding: 0 20px;
+  }
+
+  .navbar-brand {
+    font-size: 18px;
+  }
+
+  .navbar-links {
+    gap: 3px;
+  }
+
+  .navbar-link {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .navbar-right {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 700px) {
+  .navbar {
+    min-height: auto;
+    padding: 14px 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .navbar-brand {
+    width: 100%;
+    font-size: 18px;
+  }
+
+  .navbar-links {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .navbar-link {
+    width: 100%;
+    padding: 9px 6px;
+    font-size: 13px;
+  }
+
+  .navbar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .navbar-user {
+    font-size: 14px;
+  }
+
+  .logout-button {
+    padding: 9px 15px;
+  }
+}
+
+@media (max-width: 420px) {
+  .navbar {
+    padding: 12px;
+  }
+
+  .navbar-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

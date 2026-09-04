@@ -105,7 +105,7 @@ function SentEmails() {
 
               <div className="email-details">
                 <p>
-                  <strong>Scheduled:</strong>{" "}
+                  <strong>Scheduled for:</strong>{" "}
                   {new Date(
                     email.scheduled_at
                   ).toLocaleString()}

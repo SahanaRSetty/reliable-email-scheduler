@@ -54,5 +54,9 @@ class Settings:
         "dev-secret-change-this",
     )
 
+    SMTP_ENCRYPTION_KEY: str = os.getenv(
+        "SMTP_ENCRYPTION_KEY",
+        "",
+    )
 
 settings = Settings()

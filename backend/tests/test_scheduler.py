@@ -249,3 +249,70 @@ def test_claim_due_email_is_not_claimed_twice(
         session_b.rollback()
         session_a.close()
         session_b.close()
+
+def test_restart_recovers_stuck_processing_email(
+    db,
+    test_user_and_sender,
+    monkeypatch,
+):
+    user, sender = test_user_and_sender
+
+    stuck_at = (
+        datetime.now(timezone.utc)
+        - timedelta(
+            seconds=service.settings.PROCESSING_TIMEOUT_SECONDS + 10
+        )
+    )
+
+    email = ScheduledEmail(
+        sender_id=sender.id,
+        subject="Restart Recovery Test",
+        body="This email should recover after scheduler restart.",
+        scheduled_at=stuck_at,
+        status=EmailStatus.PROCESSING,
+        attempts=1,
+        processing_started_at=stuck_at,
+        idempotency_key=f"pytest-restart-{uuid4().hex}",
+    )
+
+    db.add(email)
+    db.commit()
+
+    monkeypatch.setattr(
+        service,
+        "SessionLocal",
+        lambda: TestingSessionLocal(),
+    )
+
+    # Simulate the scheduler starting again after a restart.
+    recovered = service.recover_stuck_emails()
+
+    assert recovered == 1
+
+    db.expire_all()
+
+    recovered_email = db.get(
+        ScheduledEmail,
+        email.id,
+    )
+
+    assert recovered_email is not None
+    assert recovered_email.status == EmailStatus.SCHEDULED
+    assert recovered_email.processing_started_at is None
+
+    # The recovered email should now be eligible for claiming again.
+    claimed_ids = service.claim_due_emails()
+
+    assert email.id in claimed_ids
+
+    db.expire_all()
+
+    final_email = db.get(
+        ScheduledEmail,
+        email.id,
+    )
+
+    assert final_email is not None
+    assert final_email.status == EmailStatus.PROCESSING
+    assert final_email.attempts == 2
+    assert final_email.processing_started_at is not None

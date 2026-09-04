@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import api from "../services/api";
 import "./ComposeEmail.css";
@@ -12,7 +12,6 @@ interface Sender {
 }
 
 function ComposeEmail() {
-  const navigate = useNavigate();
 
   const [senders, setSenders] = useState<Sender[]>([]);
   const [senderId, setSenderId] = useState("");
@@ -20,6 +19,7 @@ function ComposeEmail() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [recipients, setRecipients] = useState("");
+  const [csvFileName, setCsvFileName] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
 
   const [loadingSenders, setLoadingSenders] = useState(true);
@@ -51,6 +51,60 @@ function ComposeEmail() {
     loadSenders();
   }, []);
 
+
+  function handleCsvUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      setError("Please upload a CSV file.");
+      toast.error("Please upload a CSV file.");
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const text = String(reader.result ?? "");
+
+    const emails = text
+      .split(/\r?\n/)
+      .flatMap((line) => line.split(","))
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    if (emails.length === 0) {
+      setError("The CSV file does not contain any email addresses.");
+      toast.error("The CSV file does not contain any email addresses.");
+      return;
+    }
+
+    const uniqueEmails = [...new Set(emails)];
+
+    setRecipients(uniqueEmails.join(", "));
+    setCsvFileName(file.name);
+    setError("");
+
+    toast.success(
+      `${uniqueEmails.length} recipient${
+        uniqueEmails.length === 1 ? "" : "s"
+      } imported from CSV.`,
+    );
+  };
+
+  reader.onerror = () => {
+    setError("Failed to read the CSV file.");
+    toast.error("Failed to read the CSV file.");
+  };
+
+  reader.readAsText(file);
+}
+
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
@@ -80,15 +134,20 @@ function ComposeEmail() {
         `Email scheduled successfully. Email ID: ${response.data.email_id}`,
       );
 
+      toast.success("Email scheduled successfully.");
+
       setSubject("");
       setBody("");
       setRecipients("");
       setScheduledAt("");
     } catch (err: any) {
-      setError(
+      const errorMessage =
         err.response?.data?.detail ||
-          "Failed to schedule email. Please try again.",
-      );
+        "Failed to schedule email. Please try again.";
+
+      setError(errorMessage);
+
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -97,14 +156,6 @@ function ComposeEmail() {
   return (
     <main className="compose-page">
       <div className="compose-container">
-
-        <button
-          type="button"
-          className="back-button"
-          onClick={() => navigate("/dashboard")}
-        >
-          ← Back to Dashboard
-        </button>
 
         <div className="compose-header">
           <h1>Compose Email</h1>
@@ -184,6 +235,26 @@ function ComposeEmail() {
             <small className="form-help">
               Separate multiple email addresses with commas.
             </small>
+
+            <div className="csv-upload">
+              <label htmlFor="csvFile" className="csv-upload-label">
+                Or upload recipients from CSV
+              </label>
+
+              <input
+                id="csvFile"
+                type="file"
+                accept=".csv,text/csv"
+                onChange={handleCsvUpload}
+                className="form-input"
+              />
+
+              {csvFileName && (
+                <small className="form-help">
+                  Imported from: {csvFileName}
+                </small>
+              )}
+            </div>
           </div>
 
           {/* Subject */}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import api from "../services/api";
 import { toast } from "sonner";
+
+import api from "../services/api";
 
 interface Recipient {
   email: string;
@@ -9,7 +10,7 @@ interface Recipient {
   error_message: string | null;
 }
 
-interface ScheduledEmail {
+interface FailedEmail {
   id: number;
   sender_id: number;
   subject: string;
@@ -22,66 +23,64 @@ interface ScheduledEmail {
   recipients: Recipient[];
 }
 
-function ScheduledEmails() {
-  const [emails, setEmails] = useState<ScheduledEmail[]>([]);
+function FailedEmails() {
+  const [emails, setEmails] = useState<FailedEmail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [cancellingId, setCancellingId] = useState<number | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const [retryingId, setRetryingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const fetchScheduledEmails = async () => {
+  const fetchFailedEmails = async () => {
     try {
-      const response = await api.get<ScheduledEmail[]>(
+      const response = await api.get<FailedEmail[]>(
         "/api/emails/scheduled"
       );
 
-      setEmails(
-        response.data.filter(
-          (email) =>
-            email.status === "scheduled" ||
-            email.status === "processing"
-        )
+      const failedEmails = response.data.filter(
+        (email) => email.status === "failed"
       );
+
+      setEmails(failedEmails);
     } catch (err) {
       console.error(err);
-      setError("Failed to load scheduled emails.");
+      setError("Failed to load failed emails.");
     }
   };
 
   useEffect(() => {
     const loadEmails = async () => {
       setLoading(true);
-      await fetchScheduledEmails();
+      await fetchFailedEmails();
       setLoading(false);
     };
 
     loadEmails();
   }, []);
 
-  const handleCancel = async (emailId: number) => {
+  const handleRetry = async (emailId: number) => {
     const confirmed = window.confirm(
-      "Are you sure you want to cancel this scheduled email?"
+      "Are you sure you want to retry this failed email?"
     );
 
     if (!confirmed) {
       return;
     }
 
-    setCancellingId(emailId);
+    setRetryingId(emailId);
     setError("");
     setSuccessMessage("");
 
     try {
-      await api.post(`/api/emails/${emailId}/cancel`);
+      await api.post(`/api/emails/${emailId}/retry`);
 
-      toast.success("Email cancelled successfully.");
+      toast.success("Email retry scheduled successfully.");
 
       setSuccessMessage(
-        `Email ${emailId} cancelled successfully.`
+        `Email ${emailId} queued for retry successfully.`
       );
 
-      await fetchScheduledEmails();
+      await fetchFailedEmails();
     } catch (err: any) {
       console.error(err);
 
@@ -89,21 +88,21 @@ function ScheduledEmails() {
 
       setError(
         requestError?.response?.data?.detail ||
-          "Failed to cancel email."
+          "Failed to retry email."
       );
 
       toast.error(
         requestError?.response?.data?.detail ||
-          "Failed to cancel email."
+          "Failed to retry email."
       );
     } finally {
-      setCancellingId(null);
+      setRetryingId(null);
     }
   };
 
   const handleDelete = async (emailId: number) => {
     const confirmed = window.confirm(
-      "Are you sure you want to permanently delete this email?"
+      "Are you sure you want to permanently delete this failed email?"
     );
 
     if (!confirmed) {
@@ -123,7 +122,7 @@ function ScheduledEmails() {
         `Email ${emailId} deleted successfully.`
       );
 
-      await fetchScheduledEmails();
+      await fetchFailedEmails();
     } catch (err: any) {
       console.error(err);
 
@@ -146,8 +145,8 @@ function ScheduledEmails() {
   if (loading) {
     return (
       <div className="page-container">
-        <h1>Scheduled Emails</h1>
-        <p>Loading scheduled emails...</p>
+        <h1>Failed Emails</h1>
+        <p>Loading failed emails...</p>
       </div>
     );
   }
@@ -155,7 +154,7 @@ function ScheduledEmails() {
   if (error && emails.length === 0) {
     return (
       <div className="page-container">
-        <h1>Scheduled Emails</h1>
+        <h1>Failed Emails</h1>
 
         <div className="error-message">
           {error}
@@ -168,18 +167,11 @@ function ScheduledEmails() {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>Scheduled Emails</h1>
+          <h1>Failed Emails</h1>
           <p>
-            View and manage your scheduled emails.
+            Review failed emails and retry eligible deliveries.
           </p>
         </div>
-
-        <a
-          href="/compose"
-          className="primary-button"
-        >
-          Compose Email
-        </a>
       </div>
 
       {successMessage && (
@@ -196,10 +188,10 @@ function ScheduledEmails() {
 
       {emails.length === 0 ? (
         <div className="empty-state">
-          <h2>No scheduled emails</h2>
+          <h2>No failed emails</h2>
 
           <p>
-            You don't have any scheduled emails yet.
+            You don't have any failed emails.
           </p>
         </div>
       ) : (
@@ -218,16 +210,14 @@ function ScheduledEmails() {
                   </p>
                 </div>
 
-                <span
-                  className={`status status-${email.status}`}
-                >
-                  {email.status}
+                <span className="status status-failed">
+                  failed
                 </span>
               </div>
 
               <div className="email-details">
                 <p>
-                  <strong>Scheduled:</strong>{" "}
+                  <strong>Scheduled for:</strong>{" "}
                   {new Date(
                     email.scheduled_at
                   ).toLocaleString()}
@@ -261,53 +251,45 @@ function ScheduledEmails() {
                 </ul>
               </div>
 
-              <div className="email-body">
-                <strong>Message</strong>
-
-                <p>{email.body}</p>
-              </div>
-
               {email.last_error && (
                 <div className="email-error">
                   {email.last_error}
                 </div>
               )}
 
-              {email.status === "scheduled" && (
-                <div className="email-actions">
-                  <button
-                    type="button"
-                    className="cancel-button"
-                    onClick={() =>
-                      handleCancel(email.id)
-                    }
-                    disabled={
-                      cancellingId === email.id ||
-                      deletingId === email.id
-                    }
-                  >
-                    {cancellingId === email.id
-                      ? "Cancelling..."
-                      : "Cancel Email"}
-                  </button>
+              <div className="email-actions">
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() =>
+                    handleRetry(email.id)
+                  }
+                  disabled={
+                    retryingId === email.id ||
+                    deletingId === email.id
+                  }
+                >
+                  {retryingId === email.id
+                    ? "Retrying..."
+                    : "Retry Email"}
+                </button>
 
-                  <button
-                    type="button"
-                    className="delete-button"
-                    onClick={() =>
-                      handleDelete(email.id)
-                    }
-                    disabled={
-                      cancellingId === email.id ||
-                      deletingId === email.id
-                    }
-                  >
-                    {deletingId === email.id
-                      ? "Deleting..."
-                      : "Delete Email"}
-                  </button>
-                </div>
-              )}
+                <button
+                  type="button"
+                  className="delete-button"
+                  onClick={() =>
+                    handleDelete(email.id)
+                  }
+                  disabled={
+                    retryingId === email.id ||
+                    deletingId === email.id
+                  }
+                >
+                  {deletingId === email.id
+                    ? "Deleting..."
+                    : "Delete Email"}
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -316,4 +298,4 @@ function ScheduledEmails() {
   );
 }
 
-export default ScheduledEmails;
+export default FailedEmails;

@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from app.core.database import Base, get_db
 from app.main import app
+from app.services.encryption import encrypt_smtp_password
 
 
 def get_test_database_url() -> str:
@@ -57,7 +58,7 @@ def test_user_and_sender(db):
         smtp_host="smtp.test.local",
         smtp_port=587,
         smtp_username="test@example.com",
-        smtp_password="test-password",
+        smtp_password=encrypt_smtp_password("test-password"),
     )
 
     db.add(sender)

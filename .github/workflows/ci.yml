@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: email_scheduler_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: email_scheduler_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U email_scheduler_user -d email_scheduler_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run backend tests
+        env:
+          DATABASE_URL: postgresql+psycopg://email_scheduler_user:test_password@localhost:5432/email_scheduler_test
+          REDIS_URL: redis://localhost:6379/0
+          GOOGLE_CLIENT_ID: test-client-id
+          GOOGLE_CLIENT_SECRET: test-client-secret
+          GOOGLE_REDIRECT_URI: http://localhost:8000/auth/google/callback
+          SMTP_ENCRYPTION_KEY: "m9kY6nT4cX2wV8pQ7sR5uN3hJ1fL0aBcDeFgHiJkLmN="
+        run: |
+          pytest backend/tests -v
+
+  frontend-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint

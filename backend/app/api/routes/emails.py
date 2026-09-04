@@ -1,15 +1,22 @@
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.services.rate_limiter import check_schedule_rate_limit
+from app.services.encryption import encrypt_smtp_password
+from app.core.config import settings
 from app.core.database import get_db
-from app.models.recipient import EmailRecipient
+from app.models.recipient import EmailRecipient, RecipientStatus
 from app.models.scheduled_email import ScheduledEmail
 from app.models.sender import EmailSender
-from app.schemas.email import ScheduledEmailCreate
-
+from app.schemas.email import (
+    EmailSenderCreate,
+    EmailSenderResponse,
+    ScheduledEmailCreate,
+)
 
 router = APIRouter(
     prefix="/api/emails",
@@ -63,6 +70,82 @@ def get_email_senders(
         for sender in senders
     ]
 
+
+@router.post(
+    "/senders",
+    response_model=EmailSenderResponse,
+)
+def create_email_sender(
+    sender_request: EmailSenderCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    # ---------------------------------------------------------
+    # 1. Get logged-in user
+    # ---------------------------------------------------------
+    user_id = get_authenticated_user_id(request)
+
+    # ---------------------------------------------------------
+    # 2. Create sender for this user
+    # ---------------------------------------------------------
+    sender = EmailSender(
+        user_id=user_id,
+        email=str(sender_request.email),
+        display_name=sender_request.display_name,
+        smtp_host=sender_request.smtp_host,
+        smtp_port=sender_request.smtp_port,
+        smtp_username=sender_request.smtp_username,
+        smtp_password=encrypt_smtp_password(sender_request.smtp_password),
+    )
+
+    db.add(sender)
+    db.commit()
+    db.refresh(sender)
+
+    # ---------------------------------------------------------
+    # 3. Return safe sender information only
+    # ---------------------------------------------------------
+    return EmailSenderResponse(
+        id=sender.id,
+        email=sender.email,
+        display_name=sender.display_name,
+    )
+
+@router.delete("/senders/{sender_id}")
+def delete_email_sender(
+    sender_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    user_id = get_authenticated_user_id(request)
+
+    sender = db.execute(
+        select(EmailSender).where(
+            EmailSender.id == sender_id,
+            EmailSender.user_id == user_id,
+        )
+    ).scalar_one_or_none()
+
+    if sender is None:
+        raise HTTPException(status_code=404, detail="Sender not found")
+
+    in_use = db.execute(
+        select(ScheduledEmail.id).where(
+            ScheduledEmail.sender_id == sender_id
+        ).limit(1)
+    ).first()
+
+    if in_use is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete sender that is used by an email",
+        )
+
+    db.delete(sender)
+    db.commit()
+
+    return {"message": "Sender deleted successfully"}
+
 @router.post("/schedule")
 def schedule_email(
     email_request: ScheduledEmailCreate,
@@ -73,6 +156,7 @@ def schedule_email(
     # 1. Get logged-in user
     # ---------------------------------------------------------
     user_id = get_authenticated_user_id(request)
+    check_schedule_rate_limit(user_id)
 
     # ---------------------------------------------------------
     # 2. Verify that the sender belongs to the logged-in user
@@ -375,4 +459,176 @@ def cancel_scheduled_email(
         "message": "Email cancelled successfully",
         "email_id": email.id,
         "status": email.status,
+    }
+
+
+@router.delete("/{email_id}")
+def delete_email(
+    email_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    # ---------------------------------------------------------
+    # 1. Get logged-in user
+    # ---------------------------------------------------------
+    user_id = get_authenticated_user_id(request)
+
+    # ---------------------------------------------------------
+    # 2. Find and lock the email while verifying ownership
+    # ---------------------------------------------------------
+    email = db.execute(
+        select(ScheduledEmail)
+        .join(
+            EmailSender,
+            ScheduledEmail.sender_id == EmailSender.id,
+        )
+        .where(
+            ScheduledEmail.id == email_id,
+            EmailSender.user_id == user_id,
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+
+    if email is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Scheduled email not found",
+        )
+
+    # ---------------------------------------------------------
+    # 3. Only safe-to-delete statuses can be deleted
+    # ---------------------------------------------------------
+    if email.status == "processing":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Email cannot be deleted because "
+                "it is currently being processed."
+            ),
+        )
+
+    if email.status == "sent":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Email cannot be deleted because "
+                "it has already been sent."
+            ),
+        )
+
+    # ---------------------------------------------------------
+    # 4. Delete the email
+    # ---------------------------------------------------------
+    db.delete(email)
+    db.commit()
+
+    return {
+        "message": "Email deleted successfully",
+        "email_id": email_id,
+    }
+
+
+@router.post("/{email_id}/retry")
+def retry_failed_email(
+    email_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    # ---------------------------------------------------------
+    # 1. Get logged-in user
+    # ---------------------------------------------------------
+    user_id = get_authenticated_user_id(request)
+
+    # ---------------------------------------------------------
+    # 2. Find and lock the email while verifying ownership
+    # ---------------------------------------------------------
+    email = db.execute(
+        select(ScheduledEmail)
+        .join(
+            EmailSender,
+            ScheduledEmail.sender_id == EmailSender.id,
+        )
+        .where(
+            ScheduledEmail.id == email_id,
+            EmailSender.user_id == user_id,
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+
+    if email is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Scheduled email not found",
+        )
+
+    # ---------------------------------------------------------
+    # 3. Only failed emails can be manually retried
+    # ---------------------------------------------------------
+    if email.status != "failed":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Email cannot be retried because "
+                f"its current status is '{email.status}'."
+            ),
+        )
+
+    if email.attempts >= settings.MAX_EMAIL_ATTEMPTS:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Email cannot be retried because "
+                "it has reached the maximum number of attempts."
+            ),
+        )
+
+    failed_recipient_exists = db.execute(
+        select(EmailRecipient.id)
+        .where(
+            EmailRecipient.scheduled_email_id == email.id,
+            EmailRecipient.status == RecipientStatus.FAILED,
+        )
+        .limit(1)
+    ).scalar_one_or_none()
+
+    if failed_recipient_exists is None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Email cannot be retried because "
+                "it has no failed recipients."
+            ),
+        )
+# ---------------------------------------------------------
+    # 4. Reset failed recipients for another attempt
+    # ---------------------------------------------------------
+    failed_recipients = db.execute(
+        select(EmailRecipient)
+        .where(
+            EmailRecipient.scheduled_email_id == email.id,
+            EmailRecipient.status == "failed",
+        )
+    ).scalars().all()
+
+    for recipient in failed_recipients:
+        recipient.status = "pending"
+        recipient.error_message = None
+
+    # ---------------------------------------------------------
+    # 5. Put email back into the scheduler queue
+    # ---------------------------------------------------------
+    email.status = "scheduled"
+    email.scheduled_at = datetime.now(timezone.utc)
+    email.processing_started_at = None
+    email.last_error = None
+
+    db.commit()
+    db.refresh(email)
+
+    return {
+        "message": "Email retry scheduled successfully",
+        "email_id": email.id,
+        "status": email.status,
+        "scheduled_at": email.scheduled_at,
+        "attempts": email.attempts,
     }

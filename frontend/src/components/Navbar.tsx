@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import "./Navbar.css";
 
@@ -23,6 +23,62 @@ function Navbar({ userName }: NavbarProps) {
       <div className="navbar-brand">
         Reliable Email Scheduler
       </div>
+
+      <nav className="navbar-links">
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) =>
+            isActive ? "navbar-link active" : "navbar-link"
+          }
+        >
+          Dashboard
+        </NavLink>
+
+        <NavLink
+          to="/compose"
+          className={({ isActive }) =>
+            isActive ? "navbar-link active" : "navbar-link"
+          }
+        >
+          Compose
+        </NavLink>
+
+        <NavLink
+          to="/scheduled"
+          className={({ isActive }) =>
+            isActive ? "navbar-link active" : "navbar-link"
+          }
+        >
+          Scheduled
+        </NavLink>
+
+        <NavLink
+          to="/sent"
+          className={({ isActive }) =>
+            isActive ? "navbar-link active" : "navbar-link"
+          }
+        >
+          Sent
+        </NavLink>
+
+        <NavLink
+          to="/failed"
+          className={({ isActive }) =>
+            isActive ? "navbar-link active" : "navbar-link"
+          }
+        >
+          Failed
+        </NavLink>
+
+        <NavLink
+          to="/senders"
+          className={({ isActive }) =>
+            isActive ? "navbar-link active" : "navbar-link"
+          }
+        >
+          Senders
+        </NavLink>
+      </nav>
 
       <div className="navbar-right">
         <span className="navbar-user">

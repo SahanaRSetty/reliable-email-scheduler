@@ -1,11 +1,12 @@
 services:
+
   postgres:
     image: postgres:17
     container_name: reliable_email_postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: email_scheduler_user
-      POSTGRES_PASSWORD: email_scheduler_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: email_scheduler
     ports:
       - "5432:5432"
@@ -18,6 +19,67 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: reliable_email_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://email_scheduler_user:${POSTGRES_PASSWORD}@postgres:5432/email_scheduler
+      REDIS_URL: redis://redis:6379/0
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+      SMTP_ENCRYPTION_KEY: ${SMTP_ENCRYPTION_KEY}
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8000:8000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: reliable_email_worker
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+      DATABASE_URL: postgresql+psycopg://email_scheduler_user:${POSTGRES_PASSWORD}@postgres:5432/email_scheduler
+      REDIS_URL: redis://redis:6379/0
+      SMTP_ENCRYPTION_KEY: ${SMTP_ENCRYPTION_KEY}
+    depends_on:
+      - postgres
+      - redis
+    command: celery -A app.worker.celery_app.celery_app worker --loglevel=info
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: reliable_email_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: reliable_email_scheduler
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+      DATABASE_URL: postgresql+psycopg://email_scheduler_user:${POSTGRES_PASSWORD}@postgres:5432/email_scheduler
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    command: python -m app.scheduler
 
 volumes:
   postgres_data:
