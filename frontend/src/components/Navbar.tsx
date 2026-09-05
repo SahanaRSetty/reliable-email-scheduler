@@ -71,6 +71,15 @@ function Navbar({ userName }: NavbarProps) {
         </NavLink>
 
         <NavLink
+          to="/cancelled"
+          className={({ isActive }) =>
+            isActive ? "navbar-link active" : "navbar-link"
+          }
+        >
+          Cancelled
+        </NavLink>
+
+        <NavLink
           to="/senders"
           className={({ isActive }) =>
             isActive ? "navbar-link active" : "navbar-link"

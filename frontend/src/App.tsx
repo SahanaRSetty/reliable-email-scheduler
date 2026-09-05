@@ -14,6 +14,7 @@ import ComposeEmail from "./pages/ComposeEmail";
 import ScheduledEmails from "./pages/ScheduledEmails";
 import SentEmails from "./pages/SentEmails";
 import FailedEmails from "./pages/FailedEmails";
+import CancelledEmails from "./pages/CancelledEmails";
 import Senders from "./pages/Senders";
 
 function App() {
@@ -59,9 +60,15 @@ function App() {
           />
 
           <Route
+            path="/cancelled"
+            element={<CancelledEmails />}
+          />
+
+          <Route
             path="/senders"
             element={<Senders />}
           />
+
         </Route>
       </Routes>
     </BrowserRouter>

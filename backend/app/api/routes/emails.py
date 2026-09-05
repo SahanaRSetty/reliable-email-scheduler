@@ -344,6 +344,72 @@ def get_sent_emails(
 
     return result
 
+@router.get("/cancelled")
+def get_cancelled_emails(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    # ---------------------------------------------------------
+    # 1. Get logged-in user
+    # ---------------------------------------------------------
+    user_id = get_authenticated_user_id(request)
+
+    # ---------------------------------------------------------
+    # 2. Get only cancelled emails belonging to this user
+    # ---------------------------------------------------------
+    cancelled_emails = db.execute(
+        select(ScheduledEmail)
+        .join(
+            EmailSender,
+            ScheduledEmail.sender_id == EmailSender.id,
+        )
+        .where(
+            EmailSender.user_id == user_id,
+            ScheduledEmail.status == "cancelled",
+        )
+        .order_by(
+            ScheduledEmail.created_at.desc(),
+        )
+    ).scalars().all()
+
+    # ---------------------------------------------------------
+    # 3. Build response
+    # ---------------------------------------------------------
+    result = []
+
+    for email in cancelled_emails:
+        recipients = db.execute(
+            select(EmailRecipient)
+            .where(
+                EmailRecipient.scheduled_email_id == email.id,
+            )
+        ).scalars().all()
+
+        result.append(
+            {
+                "id": email.id,
+                "sender_id": email.sender_id,
+                "subject": email.subject,
+                "body": email.body,
+                "scheduled_at": email.scheduled_at,
+                "status": email.status,
+                "attempts": email.attempts,
+                "last_error": email.last_error,
+                "created_at": email.created_at,
+                "recipients": [
+                    {
+                        "email": recipient.email,
+                        "status": recipient.status,
+                        "sent_at": recipient.sent_at,
+                        "error_message": recipient.error_message,
+                    }
+                    for recipient in recipients
+                ],
+            }
+        )
+
+    return result
+
 @router.get("/stats")
 def get_email_stats(
     request: Request,

@@ -6,8 +6,11 @@ from uuid import uuid4
 from app.main import app
 from app.models.recipient import EmailRecipient, RecipientStatus
 from app.models.scheduled_email import EmailStatus, ScheduledEmail
+from app.models.sender import EmailSender
+from app.models.user import User
 from app.core.redis import redis_client
 from app.services.encryption import encrypt_smtp_password
+
 
 client = TestClient(app)
 
@@ -189,12 +192,62 @@ def test_delete_sender_fails_when_sender_is_used_by_email(
         "Cannot delete sender that is used by an email"
     )
 
-def test_user_only_sees_their_own_senders():
+def test_user_only_sees_their_own_senders(
+    client,
+    db,
+):
     from app.api.routes import emails
 
-    original_function = emails.get_authenticated_user_id
+    user_one = User(
+        google_id=f"pytest-senders-user-one-{uuid4().hex}",
+        name="Sender Test User One",
+        email=f"sender-test-one-{uuid4().hex}@example.com",
+    )
 
-    emails.get_authenticated_user_id = lambda request: 4
+    user_two = User(
+        google_id=f"pytest-senders-user-two-{uuid4().hex}",
+        name="Sender Test User Two",
+        email=f"sender-test-two-{uuid4().hex}@example.com",
+    )
+
+    db.add_all([user_one, user_two])
+    db.flush()
+
+    sender_one = EmailSender(
+        user_id=user_one.id,
+        email=f"sender-one-{uuid4().hex}@example.com",
+        display_name="Sender One",
+        smtp_host="smtp.test.local",
+        smtp_port=587,
+        smtp_username="test@example.com",
+        smtp_password=encrypt_smtp_password("test-password"),
+    )
+
+    sender_two = EmailSender(
+        user_id=user_one.id,
+        email=f"sender-two-{uuid4().hex}@example.com",
+        display_name="Sender Two",
+        smtp_host="smtp.test.local",
+        smtp_port=587,
+        smtp_username="test@example.com",
+        smtp_password=encrypt_smtp_password("test-password"),
+    )
+
+    other_user_sender = EmailSender(
+        user_id=user_two.id,
+        email=f"other-user-{uuid4().hex}@example.com",
+        display_name="Other User Sender",
+        smtp_host="smtp.test.local",
+        smtp_port=587,
+        smtp_username="test@example.com",
+        smtp_password=encrypt_smtp_password("test-password"),
+    )
+
+    db.add_all([sender_one, sender_two, other_user_sender])
+    db.commit()
+
+    original_function = emails.get_authenticated_user_id
+    emails.get_authenticated_user_id = lambda request: user_one.id
 
     try:
         response = client.get("/api/emails/senders")
@@ -207,9 +260,9 @@ def test_user_only_sees_their_own_senders():
 
     sender_ids = {sender["id"] for sender in senders}
 
-    assert {5, 6}.issubset(sender_ids)
-    assert 2 not in sender_ids
-    assert 4 not in sender_ids
+    assert sender_one.id in sender_ids
+    assert sender_two.id in sender_ids
+    assert other_user_sender.id not in sender_ids
 
     assert all(
         "smtp_host" not in sender
@@ -218,7 +271,8 @@ def test_user_only_sees_their_own_senders():
         and "smtp_password" not in sender
         for sender in senders
     )
-
+    
+    
 def test_authenticated_user_can_add_sender(
     client,
     db,
