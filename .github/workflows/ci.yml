@@ -56,7 +56,7 @@ jobs:
           GOOGLE_CLIENT_ID: test-client-id
           GOOGLE_CLIENT_SECRET: test-client-secret
           GOOGLE_REDIRECT_URI: http://localhost:8000/auth/google/callback
-          SMTP_ENCRYPTION_KEY: "m9kY6nT4cX2wV8pQ7sR5uN3hJ1fL0aBcDeFgHiJkLmN="
+          SMTP_ENCRYPTION_KEY: ${{ secrets.SMTP_ENCRYPTION_KEY }}
         run: |
           pytest backend/tests -v
 
