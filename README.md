@@ -98,6 +98,7 @@ The architecture is designed to address these failure scenarios explicitly rathe
 
 ## Email Processing Flow
 
+```text
 User schedules email
         |
         v
@@ -140,7 +141,7 @@ SMTP delivery attempt
                        +----+----+
                        |         |
                       SENT     FAILED
-
+```
 
 ## Reliability Design
 
@@ -164,10 +165,11 @@ This prevents multiple scheduler processes from claiming and processing the same
 
 Failed email deliveries use exponential backoff:
 
+```text
 Attempt 1 → 10 seconds
 Attempt 2 → 20 seconds
 Attempt 3 → 40 seconds
-
+```
 Retry settings are configurable through application configuration.
 
 ### Restart Recovery
@@ -228,13 +230,13 @@ Copy-Item .env.example .env
 ```
 
 Then update `.env` with your own values for:
-
+```text
 POSTGRES_PASSWORD
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
 GOOGLE_REDIRECT_URI
 SMTP_ENCRYPTION_KEY
-
+```
 Never commit `.env` to Git.
 
 ### Start the Full Stack
@@ -250,14 +252,14 @@ docker compose ps
 ```
 
 Expected services:
-
+```text
 reliable_email_postgres
 reliable_email_redis
 reliable_email_backend
 reliable_email_worker
 reliable_email_scheduler
 reliable_email_frontend
-
+```
 ### View Logs
 
 Backend:
