@@ -206,39 +206,6 @@ Scheduling requests use an idempotency key to prevent duplicate email jobs from 
 
 **Infrastructure:** Docker, Docker Compose, Nginx
 
-## Project Structure
-
-reliable-email-scheduler/
-│
-├── backend/
-│   ├── app/
-│   │   ├── api/
-│   │   │   └── routes/
-│   │   ├── core/
-│   │   ├── models/
-│   │   ├── schemas/
-│   │   ├── scheduler/
-│   │   ├── services/
-│   │   └── worker/
-│   │
-│   ├── alembic/
-│   ├── tests/
-│   └── Dockerfile
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   └── pages/
-│   ├── Dockerfile
-│   └── package.json
-│
-├── docs/
-├── docker-compose.yml
-├── requirements.txt
-├── alembic.ini
-├── .env.example
-└── README.md
-
 ## Docker 
 
 The application is containerized with Docker Compose across PostgreSQL, Redis, FastAPI, Celery Worker, Scheduler, and Nginx frontend services.
