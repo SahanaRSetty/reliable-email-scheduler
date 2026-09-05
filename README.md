@@ -33,7 +33,6 @@ The system is designed around reliable background processing, persistent schedul
 
 ## Architecture
 
-```text
                     +----------------------+
                     |    React Frontend    |
                     |     Vite + TS        |
@@ -71,11 +70,10 @@ The system is designed around reliable background processing, persistent schedul
                 | Python Poller |
                 |    2 seconds  |
                 +---------------+
-```
+
 
 ## Email Processing Flow
 
-```text
 User schedules email
         |
         v
@@ -118,7 +116,7 @@ SMTP delivery attempt
                        +----+----+
                        |         |
                       SENT     FAILED
-```
+
 
 ## Reliability Design
 
@@ -142,11 +140,9 @@ This prevents multiple scheduler processes from claiming and processing the same
 
 Failed email deliveries use exponential backoff:
 
-```text
 Attempt 1 → 10 seconds
 Attempt 2 → 20 seconds
 Attempt 3 → 40 seconds
-```
 
 Retry settings are configurable through application configuration.
 
@@ -245,7 +241,6 @@ response.
 
 ## Project Structure
 
-```text
 reliable-email-scheduler/
 │
 ├── backend/
@@ -276,13 +271,11 @@ reliable-email-scheduler/
 ├── alembic.ini
 ├── .env.example
 └── README.md
-```
 
 ## Docker Architecture
 
 The project runs as six Docker services:
 
-```text
 +------------------------------------------------------+
 |                  Docker Compose                      |
 |                                                      |
@@ -307,7 +300,6 @@ The project runs as six Docker services:
 |                                                        |
 |                                                       SMTP
 +------------------------------------------------------+
-```
 
 ## Running with Docker
 
@@ -328,13 +320,11 @@ Copy-Item .env.example .env
 
 Then update `.env` with your own values for:
 
-```text
 POSTGRES_PASSWORD
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
 GOOGLE_REDIRECT_URI
 SMTP_ENCRYPTION_KEY
-```
 
 Never commit `.env` to Git.
 
@@ -352,14 +342,12 @@ docker compose ps
 
 Expected services:
 
-```text
 reliable_email_postgres
 reliable_email_redis
 reliable_email_backend
 reliable_email_worker
 reliable_email_scheduler
 reliable_email_frontend
-```
 
 ### View Logs
 
@@ -485,19 +473,15 @@ alembic upgrade head
 The core application, reliability features, authentication, sender management, frontend, automated tests, and Docker environment are implemented and locally verified.
 
 The Docker stack has been verified with:
-
-```text
-PostgreSQL     ✅
-Redis          ✅
-FastAPI        ✅
-Celery Worker  ✅
-Scheduler      ✅
-React Frontend ✅
-```
+PostgreSQL     
+Redis          
+FastAPI        
+Celery Worker  
+Scheduler      
+React Frontend 
 
 The complete email processing pipeline has also been verified:
 
-```text
 Frontend
    ↓
 FastAPI
@@ -513,7 +497,6 @@ Worker
 SMTP
    ↓
 SENT
-```
 
 ## Portfolio Highlights
 
