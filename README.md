@@ -1,4 +1,5 @@
 # Reliable Email Scheduler
+
 [![CI](https://github.com/SahanaRSetty/reliable-email-scheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/SahanaRSetty/reliable-email-scheduler/actions/workflows/ci.yml)
 
 A reliable distributed email scheduling platform built with Python, FastAPI, PostgreSQL, Redis, Celery, React, and TypeScript.
@@ -57,6 +58,7 @@ The architecture is designed to address these failure scenarios explicitly rathe
 
 ## Architecture
 
+```text
                     +----------------------+
                     |    React Frontend    |
                     |     Vite + TS        |
@@ -94,7 +96,7 @@ The architecture is designed to address these failure scenarios explicitly rathe
                 | Python Poller |
                 |    2 seconds  |
                 +---------------+
-
+```
 
 ## Email Processing Flow
 
@@ -208,7 +210,7 @@ Scheduling requests use an idempotency key to prevent duplicate email jobs from 
 
 **Infrastructure:** Docker, Docker Compose, Nginx
 
-## Docker 
+## Docker Architecture
 
 The application is containerized with Docker Compose across PostgreSQL, Redis, FastAPI, Celery Worker, Scheduler, and Nginx frontend services.
 
@@ -288,23 +290,12 @@ docker compose down
 
 ## Application URLs
 
-Frontend:
+Frontend: `http://localhost:5173`
 
-```text
-http://localhost:5173
-```
+Backend API: `http://localhost:8000`
 
-Backend API:
+Swagger API documentation: `http://localhost:8000/docs`
 
-```text
-http://localhost:8000
-```
-
-Swagger API documentation:
-
-```text
-http://localhost:8000/docs
-```
 
 ## Testing
 
